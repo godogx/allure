@@ -6,8 +6,9 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	"github.com/godogx/allure"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/godogx/allure"
 )
 
 func TestRegisterFormatter(t *testing.T) {

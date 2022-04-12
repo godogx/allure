@@ -2,9 +2,10 @@ package allure
 
 import (
 	"fmt"
-	"io/ioutil"
+	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/spf13/afero"
 )
 
 // Container lists all results.
@@ -102,7 +103,7 @@ type Attachment struct {
 }
 
 // NewAttachment creates and stores attachment.
-func NewAttachment(name string, mimeType string, resultsPath string, content []byte) (*Attachment, error) {
+func NewAttachment(fs afero.Fs, name string, mimeType string, resultsPath string, content []byte) (*Attachment, error) {
 	var ext string
 
 	switch mimeType {
@@ -128,7 +129,7 @@ func NewAttachment(name string, mimeType string, resultsPath string, content []b
 		Source: fmt.Sprintf("%s-attachment%s", uuid.New().String(), ext),
 	}
 
-	if err := ioutil.WriteFile(fmt.Sprintf("%s/%s", resultsPath, a.Source), content, 0o600); err != nil {
+	if err := afero.WriteFile(fs, filepath.Join(resultsPath, a.Source), content, 0600); err != nil {
 		return nil, err
 	}
 

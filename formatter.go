@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +17,7 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/formatters"
 	"github.com/google/uuid"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 )
 
 // RegisterFormatter adds allure to available formatters.
-func RegisterFormatter() {
+func RegisterFormatter(options ...FormatterOption) {
 	formatterRegister.Do(func() {
 		if ResultsPath == "" {
 			ResultsPath = "./allure-results"
@@ -42,7 +43,8 @@ func RegisterFormatter() {
 					suite = "Features"
 				}
 
-				return &formatter{
+				f := &formatter{
+					fs:          afero.NewOsFs(),
 					resultsPath: strings.TrimSuffix(ResultsPath, "/"),
 					container: &Container{
 						UUID:  uuid.New().String(),
@@ -51,11 +53,18 @@ func RegisterFormatter() {
 					},
 					BaseFmt: godog.NewBaseFmt(suite, writer),
 				}
+
+				for _, opt := range options {
+					opt.applyFormatterOption(f)
+				}
+
+				return f
 			})
 	})
 }
 
 type formatter struct {
+	fs          afero.Fs
 	container   *Container
 	res         *Result
 	lastTime    TimestampMs
@@ -76,7 +85,7 @@ func (f *formatter) writeResult(r *Result) {
 
 // TestRunStarted prepares test result directory.
 func (f *formatter) TestRunStarted() {
-	err := os.MkdirAll(f.resultsPath, 0o700)
+	err := f.fs.MkdirAll(f.resultsPath, 0700)
 	if err != nil {
 		log.Fatal("failed create allure results directory:", err)
 	}
@@ -135,7 +144,7 @@ func (f *formatter) argumentAttachment(st *godog.Step) *Attachment {
 	}
 
 	if st.Argument.DocString != nil {
-		att, err := NewAttachment("Doc", mediaType(st.Argument.DocString.MediaType),
+		att, err := NewAttachment(f.fs, "Doc", mediaType(st.Argument.DocString.MediaType),
 			f.resultsPath, []byte(st.Argument.DocString.Content))
 		if err != nil {
 			log.Fatal("failed to create attachment:", err)
@@ -158,7 +167,7 @@ func (f *formatter) argumentAttachment(st *godog.Step) *Attachment {
 		}
 		c.Flush()
 
-		att, err := NewAttachment("Table", mt, f.resultsPath, buf.Bytes())
+		att, err := NewAttachment(f.fs, "Table", mt, f.resultsPath, buf.Bytes())
 		if err != nil {
 			log.Fatal("failed create table attachment:", err)
 		}
@@ -234,7 +243,7 @@ func (f *formatter) writeJSON(name string, v interface{}) {
 		log.Fatal("failed to marshal json value:", err)
 	}
 
-	if err := ioutil.WriteFile(f.resultsPath+"/"+name, j, 0o600); err != nil {
+	if err := afero.WriteFile(f.fs, filepath.Join(f.resultsPath, name), j, 0600); err != nil {
 		log.Fatal("failed to write a file:", err)
 	}
 }
@@ -274,7 +283,7 @@ func (f *formatter) Summary() {
 	}
 
 	if len(env) > 0 {
-		if err := ioutil.WriteFile(f.resultsPath+"/environment.properties", env, 0o600); err != nil {
+		if err := afero.WriteFile(f.fs, filepath.Join(f.resultsPath, "environment.properties"), env, 0600); err != nil {
 			log.Fatal("failed to write a file:", err)
 		}
 	}
