@@ -87,9 +87,9 @@ type Step struct {
 	Status        Status         `json:"status,omitempty"`
 	StatusDetails *StatusDetails `json:"statusDetails,omitempty"`
 	Stage         string         `json:"stage"`
-	ChildrenSteps []Step         `json:"steps"`
-	Attachments   []Attachment   `json:"attachments"`
-	Parameters    []Parameter    `json:"parameters"`
+	ChildrenSteps []Step         `json:"steps,omitempty"`
+	Attachments   []Attachment   `json:"attachments,omitempty"`
+	Parameters    []Parameter    `json:"parameters,omitempty"`
 	Start         TimestampMs    `json:"start"`
 	Stop          TimestampMs    `json:"stop"`
 }
