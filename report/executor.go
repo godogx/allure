@@ -1,4 +1,4 @@
-package allure
+package report
 
 // Executor describes execution context.
 type Executor struct {

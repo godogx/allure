@@ -29,6 +29,7 @@ export ALLURE_ENV_TICKET=JIRA-1234
 export ALLURE_ENV_APP=todo-list
 export ALLURE_EXECUTOR_NAME=IntegrationTest
 export ALLURE_EXECUTOR_TYPE=github
+export ALLURE_EXECUTOR_URL=https://github.com/
 ```
 
 Then you can run test with

@@ -3,10 +3,10 @@ module github.com/godogx/allure
 go 1.17
 
 require (
-	github.com/bool64/dev v0.2.12
+	github.com/bool64/dev v0.2.18
 	github.com/cucumber/godog v0.12.5
 	github.com/google/uuid v1.3.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 )
 
 require (

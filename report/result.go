@@ -1,11 +1,41 @@
-package allure
+package report
 
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const (
+	// CSVMime is a media type.
+	CSVMime = "text/csv"
+)
+
+// GetTimestampMs returns current time.
+func GetTimestampMs() TimestampMs {
+	return TimestampMs(time.Now().UnixNano() / int64(time.Millisecond))
+}
+
+// TimeMs returns current time.
+func TimeMs(t time.Time) TimestampMs {
+	return TimestampMs(t.UnixNano() / int64(time.Millisecond))
+}
+
+// MediaType returns MIME type for allure type.
+func MediaType(t string) string {
+	switch t {
+	case "json":
+		return "application/json"
+	case "xml":
+		return "application/xml"
+	case "csv":
+		return CSVMime
+	default:
+		return "text/plain"
+	}
+}
 
 // Container lists all results.
 type Container struct {
@@ -114,7 +144,7 @@ func NewAttachment(name string, mimeType string, resultsPath string, content []b
 		ext = ".jpg"
 	case "image/gif":
 		ext = ".gif"
-	case csvMime:
+	case CSVMime:
 		ext = ".csv"
 	case "application/xml":
 		ext = ".xml"
