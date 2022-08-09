@@ -44,6 +44,8 @@ godog -f allure
 allure generate --clean
 ```
 
+[Example instrumentation](https://github.com/vearutop/cache-story/blob/v1.1.0/.github/workflows/test-integration.yml#L139-L162) and [sample report](https://vearutop.github.io/cache-story/).
+
 ## Sample report
 
 ![Screenshot](_testdata/screenshot.png)
