@@ -55,6 +55,9 @@ type formatter struct {
 	report.Formatter
 
 	*godog.BaseFmt
+
+	mu        sync.Mutex
+	scenarios map[*godog.Scenario]*scenarioContext
 }
 
 // TestRunStarted prepares test result directory.
@@ -62,6 +65,14 @@ func (f *formatter) TestRunStarted() {
 	if err := f.Init(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type scenarioContext struct {
+	result        *report.Result
+	start         report.TimestampMs
+	lastTime      report.TimestampMs
+	totalSteps    int
+	finishedSteps int
 }
 
 // Pickle receives scenario.
@@ -78,9 +89,24 @@ func (f *formatter) Pickle(scenario *godog.Scenario) {
 			{Name: "framework", Value: "godog"},
 			{Name: "language", Value: "Go"},
 		},
+		Start: report.GetTimestampMs(),
+		UUID:  uuid.New().String(),
 	}
 
-	f.StartNewResult(res)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.scenarios == nil {
+		f.scenarios = make(map[*godog.Scenario]*scenarioContext)
+	}
+
+	now := report.GetTimestampMs()
+	f.scenarios[scenario] = &scenarioContext{
+		result:     &res,
+		start:      now,
+		lastTime:   now,
+		totalSteps: len(scenario.Steps),
+	}
 }
 
 func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
@@ -117,38 +143,56 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 	return nil
 }
 
-func (f *formatter) step(st *godog.Step, status report.Status, statusDetails *report.StatusDetails) {
-	f.StepFinished(st.Text, status, statusDetails, func(s *report.Step) {
+func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Status, statusDetails *report.StatusDetails) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	c := f.scenarios[sc]
+	c.finishedSteps++
+
+	step := report.StepFinished(c.result, st.Text, status, statusDetails, func(s *report.Step) {
 		if att := f.argumentAttachment(st); att != nil {
 			s.Attachments = append(s.Attachments, *att)
 		}
-	})
+	}, c.lastTime)
+
+	f.LastTime = step.Stop
+
+	if c.finishedSteps == c.totalSteps {
+		f.WriteResult(c.result)
+	}
 }
 
 // Passed captures passed step.
-func (f *formatter) Passed(_ *godog.Scenario, st *godog.Step, _ *godog.StepDefinition) {
-	f.step(st, report.Passed, nil)
+func (f *formatter) Passed(sc *godog.Scenario, st *godog.Step, _ *godog.StepDefinition) {
+	f.step(sc, st, report.Passed, nil)
 }
 
 // Skipped captures skipped step.
-func (f *formatter) Skipped(_ *godog.Scenario, st *godog.Step, _ *godog.StepDefinition) {
-	f.step(st, report.Skipped, nil)
+func (f *formatter) Skipped(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
+	f.step(sc, st, report.Skipped, &report.StatusDetails{
+		Message: "Skipped: " + sd.Expr.String(),
+	})
 }
 
 // Undefined captures undefined step.
-func (f *formatter) Undefined(_ *godog.Scenario, st *godog.Step, _ *godog.StepDefinition) {
-	f.step(st, report.Broken, nil)
+func (f *formatter) Undefined(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
+	f.step(sc, st, report.Broken, &report.StatusDetails{
+		Message: "Undefined: " + sd.Expr.String(),
+	})
 }
 
 // Failed captures failed step.
-func (f *formatter) Failed(_ *godog.Scenario, st *godog.Step, _ *godog.StepDefinition, err error) {
-	f.step(st, report.Failed, &report.StatusDetails{
+func (f *formatter) Failed(sc *godog.Scenario, st *godog.Step, _ *godog.StepDefinition, err error) {
+	f.step(sc, st, report.Failed, &report.StatusDetails{
 		Message: err.Error(),
 	})
 }
 
 // Pending captures pending step.
-func (f *formatter) Pending(*godog.Scenario, *godog.Step, *godog.StepDefinition) {
+func (f *formatter) Pending(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
+	f.step(sc, st, report.Unknown, &report.StatusDetails{
+		Message: "Pending: " + sd.Expr.String(),
+	})
 }
 
 // Summary finishes report.

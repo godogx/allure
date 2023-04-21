@@ -10,12 +10,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 )
 
 // Formatter writes test results as Allure report.
 type Formatter struct {
+	mu          sync.Mutex
 	Container   *Container
 	Res         *Result
 	LastTime    TimestampMs
@@ -24,6 +26,9 @@ type Formatter struct {
 
 // WriteResult writes single result.
 func (f *Formatter) WriteResult(r *Result) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	f.LastTime = GetTimestampMs()
 
 	r.Stage = "finished"
@@ -60,6 +65,9 @@ func (f *Formatter) Init() error {
 
 // Finish flushes collected results.
 func (f *Formatter) Finish(exec Executor) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if f.Res != nil {
 		f.WriteResult(f.Res)
 	}
@@ -75,7 +83,7 @@ func (f *Formatter) Finish(exec Executor) {
 		exec.Name = os.Getenv("ALLURE_EXECUTOR_NAME")
 		exec.Type = os.Getenv("ALLURE_EXECUTOR_TYPE")
 		exec.URL = os.Getenv("ALLURE_EXECUTOR_URL")
-		exec.BuildOrder, _ = strconv.Atoi(os.Getenv("ALLURE_EXECUTOR_BUILD_ORDER")) // nolint:errcheck
+		exec.BuildOrder, _ = strconv.Atoi(os.Getenv("ALLURE_EXECUTOR_BUILD_ORDER")) //nolint:errcheck
 		exec.BuildName = os.Getenv("ALLURE_EXECUTOR_BUILD_NAME")
 		exec.BuildURL = os.Getenv("ALLURE_EXECUTOR_BUILD_URL")
 		exec.ReportName = os.Getenv("ALLURE_EXECUTOR_REPORT_NAME")
@@ -103,6 +111,9 @@ func (f *Formatter) Finish(exec Executor) {
 
 // StartNewResult finishes previous Result and starts new.
 func (f *Formatter) StartNewResult(res Result) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	if f.Res != nil {
 		f.WriteResult(f.Res)
 	}
@@ -120,32 +131,43 @@ func (f *Formatter) StartNewResult(res Result) {
 	f.Res = &res
 }
 
-// StepFinished finishes step and updates result.
-func (f *Formatter) StepFinished(name string, status Status, statusDetails *StatusDetails, prepareStep func(s *Step)) {
+// StepFinished updates result with a finished step.
+func StepFinished(res *Result, name string, status Status, statusDetails *StatusDetails, prepareStep func(s *Step), start TimestampMs) Step {
 	step := Step{
 		Name:          name,
 		Status:        status,
 		Stage:         "finished",
-		Start:         f.LastTime,
+		Start:         start,
 		StatusDetails: statusDetails,
 	}
 
-	f.LastTime = GetTimestampMs()
-	step.Stop = f.LastTime
+	step.Stop = GetTimestampMs()
 
-	if status != Skipped || f.Res.Status == "" {
-		f.Res.Status = status
+	if status != Skipped || res.Status == "" {
+		res.Status = status
 	}
 
 	if statusDetails != nil {
-		f.Res.StatusDetails = statusDetails
+		res.StatusDetails = statusDetails
 	}
 
 	if prepareStep != nil {
 		prepareStep(&step)
 	}
 
-	f.Res.Steps = append(f.Res.Steps, step)
+	res.Steps = append(res.Steps, step)
+
+	return step
+}
+
+// StepFinished finishes step and updates result.
+func (f *Formatter) StepFinished(name string, status Status, statusDetails *StatusDetails, prepareStep func(s *Step)) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	step := StepFinished(f.Res, name, status, statusDetails, prepareStep, f.LastTime)
+
+	f.LastTime = step.Stop
 }
 
 // BytesAttachment creates scalar attachment.
