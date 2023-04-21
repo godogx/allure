@@ -104,7 +104,7 @@ func (f *Formatter) Finish(exec Executor) {
 
 	if len(env) > 0 {
 		if err := ioutil.WriteFile(f.ResultsPath+"/environment.properties", env, 0o600); err != nil {
-			log.Fatal("failed to write a file:", err)
+			panic("failed to write a file:" + err.Error())
 		}
 	}
 }
