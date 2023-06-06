@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -56,8 +57,10 @@ type formatter struct {
 
 	*godog.BaseFmt
 
-	mu        sync.Mutex
-	scenarios map[*godog.Scenario]*scenarioContext
+	mu          sync.Mutex
+	threads     int
+	busyThreads map[int]bool
+	scenarios   map[*godog.Scenario]*scenarioContext
 }
 
 // TestRunStarted prepares test result directory.
@@ -73,6 +76,7 @@ type scenarioContext struct {
 	lastTime      report.TimestampMs
 	totalSteps    int
 	finishedSteps int
+	thread        int
 }
 
 // Pickle receives scenario.
@@ -101,12 +105,36 @@ func (f *formatter) Pickle(scenario *godog.Scenario) {
 	}
 
 	now := report.GetTimestampMs()
-	f.scenarios[scenario] = &scenarioContext{
+	sc := &scenarioContext{
 		result:     &res,
 		start:      now,
 		lastTime:   now,
 		totalSteps: len(scenario.Steps),
 	}
+
+	for thread, busy := range f.busyThreads {
+		if !busy {
+			f.busyThreads[thread] = true
+			sc.thread = thread
+
+			break
+		}
+	}
+
+	if sc.thread == 0 {
+		f.threads++
+		sc.thread = f.threads
+
+		if f.busyThreads == nil {
+			f.busyThreads = make(map[int]bool)
+		}
+
+		f.busyThreads[f.threads] = true
+	}
+
+	f.scenarios[scenario] = sc
+
+	sc.result.Labels = append(sc.result.Labels, report.Label{Name: "thread", Value: "routine " + strconv.Itoa(sc.thread)})
 }
 
 func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
@@ -159,6 +187,7 @@ func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Statu
 
 	if c.finishedSteps == c.totalSteps {
 		f.WriteResult(c.result)
+		f.busyThreads[c.thread] = false
 	}
 }
 
