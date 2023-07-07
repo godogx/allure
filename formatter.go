@@ -191,6 +191,16 @@ func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Statu
 	}
 }
 
+func statusDetails(prefix string, sd *godog.StepDefinition) *report.StatusDetails {
+	if sd == nil || sd.Expr == nil {
+		return nil
+	}
+
+	return &report.StatusDetails{
+		Message: prefix + sd.Expr.String(),
+	}
+}
+
 // Passed captures passed step.
 func (f *formatter) Passed(sc *godog.Scenario, st *godog.Step, _ *godog.StepDefinition) {
 	f.step(sc, st, report.Passed, nil)
@@ -198,16 +208,12 @@ func (f *formatter) Passed(sc *godog.Scenario, st *godog.Step, _ *godog.StepDefi
 
 // Skipped captures skipped step.
 func (f *formatter) Skipped(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
-	f.step(sc, st, report.Skipped, &report.StatusDetails{
-		Message: "Skipped: " + sd.Expr.String(),
-	})
+	f.step(sc, st, report.Skipped, statusDetails("Skipped: ", sd))
 }
 
 // Undefined captures undefined step.
 func (f *formatter) Undefined(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
-	f.step(sc, st, report.Broken, &report.StatusDetails{
-		Message: "Undefined: " + sd.Expr.String(),
-	})
+	f.step(sc, st, report.Broken, statusDetails("Undefined: ", sd))
 }
 
 // Failed captures failed step.
@@ -219,9 +225,7 @@ func (f *formatter) Failed(sc *godog.Scenario, st *godog.Step, _ *godog.StepDefi
 
 // Pending captures pending step.
 func (f *formatter) Pending(sc *godog.Scenario, st *godog.Step, sd *godog.StepDefinition) {
-	f.step(sc, st, report.Unknown, &report.StatusDetails{
-		Message: "Pending: " + sd.Expr.String(),
-	})
+	f.step(sc, st, report.Unknown, statusDetails("Pending: ", sd))
 }
 
 // Summary finishes report.
