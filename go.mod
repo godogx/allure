@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/bool64/dev v0.2.35
-	github.com/cucumber/godog v0.14.1
+	github.com/cucumber/godog v0.14.2-0.20240531203357-3abb346b2829
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.8.2
 )

@@ -137,9 +137,28 @@ func (f *formatter) Pickle(scenario *godog.Scenario) {
 	sc.result.Labels = append(sc.result.Labels, report.Label{Name: "thread", Value: "routine " + strconv.Itoa(sc.thread)})
 }
 
-func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
+func (f *formatter) attachments(st *godog.Step) []report.Attachment {
+	var res []report.Attachment
+
+	pickleStepResult := f.Storage.MustGetPickleStepResult(st.Id)
+	if pickleStepResult.Attachments != nil {
+		for _, attachment := range pickleStepResult.Attachments {
+			name := attachment.Name
+			if name == "" {
+				name = "Doc"
+			}
+
+			att, err := report.NewAttachment(name, attachment.MimeType, f.ResultsPath, attachment.Data)
+			if err != nil {
+				log.Fatalf("failed to create attachment: %s", err.Error())
+			}
+
+			res = append(res, *att)
+		}
+	}
+
 	if st.Argument == nil {
-		return nil
+		return res
 	}
 
 	if st.Argument.DocString != nil {
@@ -148,7 +167,7 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 			log.Fatal(err)
 		}
 
-		return att
+		res = append(res, *att)
 	} else if st.Argument.DataTable != nil {
 		var table [][]string
 
@@ -166,10 +185,10 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 			log.Fatal(err)
 		}
 
-		return att
+		res = append(res, *att)
 	}
 
-	return nil
+	return res
 }
 
 func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Status, statusDetails *report.StatusDetails) {
@@ -179,9 +198,7 @@ func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Statu
 	c.finishedSteps++
 
 	step := report.StepFinished(c.result, st.Text, status, statusDetails, func(s *report.Step) {
-		if att := f.argumentAttachment(st); att != nil {
-			s.Attachments = append(s.Attachments, *att)
-		}
+		s.Attachments = append(s.Attachments, f.attachments(st)...)
 	}, c.lastTime)
 
 	f.LastTime = step.Stop
