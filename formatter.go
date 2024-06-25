@@ -157,6 +157,7 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 			for _, cell := range r.Cells {
 				rec = append(rec, cell.Value)
 			}
+
 			table = append(table, rec)
 		}
 

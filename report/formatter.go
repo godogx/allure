@@ -38,7 +38,7 @@ func (f *Formatter) WriteResult(r *Result) {
 
 	f.Container.Children = append(f.Container.Children, r.UUID)
 
-	f.WriteJSON(fmt.Sprintf("%s-result.json", r.UUID), r)
+	f.WriteJSON(r.UUID+"-result.json", r)
 }
 
 // WriteJSON writes named value as JSON result.
