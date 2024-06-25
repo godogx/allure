@@ -21,6 +21,7 @@ linters:
   enable-all: true
   disable:
     - lll
+    - gomnd
     - gochecknoglobals
     - wrapcheck
     - paralleltest
