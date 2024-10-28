@@ -3,3 +3,5 @@
 /.vscode
 /bench-*.txt
 /vendor
+
+allure-results
