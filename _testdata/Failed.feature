@@ -1,4 +1,4 @@
-Feature: that fails
+Feature: failing scenarios
 
   Scenario: pass then fail 1
     When I pass

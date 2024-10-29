@@ -37,3 +37,12 @@ endif
 
 ## Run tests
 test: test-unit
+
+history:
+	mkdir -p allure-report/history
+	rm -rf ./allure-results/*
+	mkdir -p ./allure-results
+	cp -r ./allure-report/history ./allure-results/history
+	go test .
+	allure generate --clean
+

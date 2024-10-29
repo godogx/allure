@@ -1,4 +1,4 @@
-Feature: that passes
+Feature: outline with examples
 
   Scenario Outline: 1 scenario 10 results
     When I pass
