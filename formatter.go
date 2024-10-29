@@ -82,10 +82,9 @@ type scenarioContext struct {
 // Pickle receives scenario.
 func (f *formatter) Pickle(scenario *godog.Scenario) {
 	feature := f.Storage.MustGetFeature(scenario.Uri)
-	uid := uuid.New().String()
 	res := report.Result{
 		Name:        scenario.Name,
-		HistoryID:   feature.Feature.Name + ": " + scenario.Name + " (" + uid + ")",
+		HistoryID:   feature.Feature.Name + ": " + scenario.Name + scenario.Id,
 		FullName:    scenario.Uri + ":" + scenario.Name,
 		Description: scenario.Uri,
 		Labels: []report.Label{
@@ -95,7 +94,7 @@ func (f *formatter) Pickle(scenario *godog.Scenario) {
 			{Name: "language", Value: "Go"},
 		},
 		Start: report.GetTimestampMs(),
-		UUID:  uid,
+		UUID:  uuid.New().String(),
 	}
 
 	f.mu.Lock()

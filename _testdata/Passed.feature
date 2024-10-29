@@ -1,4 +1,4 @@
-Feature: that passes
+Feature: passing scenarios
 
   Scenario: pass and pass 1
     When I pass
