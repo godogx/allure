@@ -178,9 +178,17 @@ func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Statu
 	c := f.scenarios[sc]
 	c.finishedSteps++
 
+	pickleStepResult := f.Storage.MustGetPickleStepResult(st.Id)
+
 	step := report.StepFinished(c.result, st.Text, status, statusDetails, func(s *report.Step) {
 		if att := f.argumentAttachment(st); att != nil {
 			s.Attachments = append(s.Attachments, *att)
+		}
+
+		for _, a := range pickleStepResult.Attachments {
+			if att, err := f.BytesAttachment(a.Data, a.MimeType); err == nil && att != nil {
+				s.Attachments = append(s.Attachments, *att)
+			}
 		}
 	}, c.lastTime)
 
