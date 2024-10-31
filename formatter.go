@@ -148,6 +148,8 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 			log.Fatal(err)
 		}
 
+		att.Name = "value"
+
 		return att
 	} else if st.Argument.DataTable != nil {
 		var table [][]string
@@ -165,6 +167,8 @@ func (f *formatter) argumentAttachment(st *godog.Step) *report.Attachment {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		att.Name = "table"
 
 		return att
 	}
