@@ -187,6 +187,7 @@ func (f *formatter) step(sc *godog.Scenario, st *godog.Step, status report.Statu
 
 		for _, a := range pickleStepResult.Attachments {
 			if att, err := f.BytesAttachment(a.Data, a.MimeType); err == nil && att != nil {
+				att.Name = a.Name
 				s.Attachments = append(s.Attachments, *att)
 			}
 		}
